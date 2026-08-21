@@ -1031,6 +1031,32 @@ body.admin-mode .gallery-uploaded .gallery-delete { display: grid; place-items: 
   font-size: 1.1rem;
 }
 
+.lightbox-content small {
+  margin-top: 4px;
+  color: rgba(255,255,255,.68);
+  font-size: .72rem;
+}
+
+.lightbox-nav {
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  width: 52px;
+  height: 52px;
+  border: 1px solid rgba(255,255,255,.35);
+  border-radius: 50%;
+  color: white;
+  background: rgba(42,37,36,.48);
+  font-size: 1.6rem;
+  cursor: pointer;
+  transform: translateY(-50%);
+  transition: background .2s ease, transform .2s ease;
+}
+
+.lightbox-nav:hover { background: var(--rose); transform: translateY(-50%) scale(1.06); }
+.lightbox-prev { left: 28px; }
+.lightbox-next { right: 28px; }
+
 .lightbox-close {
   position: absolute;
   top: 22px;
@@ -1348,6 +1374,10 @@ body.admin-mode .gallery-uploaded .gallery-delete { display: grid; place-items: 
   .lightbox {
     padding: 18px;
   }
+
+  .lightbox-nav { width: 44px; height: 44px; }
+  .lightbox-prev { left: 12px; }
+  .lightbox-next { right: 12px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

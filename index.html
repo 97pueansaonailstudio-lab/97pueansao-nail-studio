@@ -145,13 +145,6 @@
         </div>
 
         <div class="gallery" id="gallery"></div>
-
-        <div class="portfolio-note reveal">
-          <span>✦</span>
-          <p>
-            เพิ่มรูปผลงานจริงของร้านได้จากปุ่ม <strong>จัดการรูปผลงาน</strong> ที่ด้านล่างของเว็บไซต์
-          </p>
-        </div>
       </div>
     </section>
 
@@ -189,9 +182,8 @@
             <h2>พิกัดร้าน</h2>
           </div>
           <p>
-            แผนที่ด้านล่างค้นหาด้วยชื่อร้าน “97Pueansao nail studio”
-            สามารถเปลี่ยนเป็นพิกัดหรือที่อยู่จริงได้ในไฟล์ HTML
-          </p>
+            ร้านตั้งอยู่ในอำเภอเมืองปทุมธานี
+            สามารถกดปุ่มด้านล่างเพื่อเปิด Google Maps และนำทางไปยังร้านได้เลย
         </div>
 
         <div class="location-grid">
@@ -340,10 +332,13 @@
 
   <div class="lightbox" id="lightbox" aria-hidden="true" role="dialog" aria-label="รูปผลงานขนาดใหญ่">
     <button class="lightbox-close" type="button" aria-label="ปิดรูป">×</button>
+    <button class="lightbox-nav lightbox-prev" id="lightboxPrev" type="button" aria-label="ดูรูปก่อนหน้า">←</button>
     <div class="lightbox-content">
       <img id="lightboxImage" src="" alt="" />
       <p id="lightboxTitle"></p>
+      <small id="lightboxCounter" aria-live="polite"></small>
     </div>
+    <button class="lightbox-nav lightbox-next" id="lightboxNext" type="button" aria-label="ดูรูปถัดไป">→</button>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>

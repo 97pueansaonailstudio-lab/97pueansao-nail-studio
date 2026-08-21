@@ -22,7 +22,7 @@ const SHOP_CONFIG = {
   instagramUrl: "https://www.instagram.com/97pueansaonailstudio?igsi=MTFzbHk1MjdmeXZ5dw%3D%3D&utm_source=qr",
   facebook: "97Pueansao nail studio",
   facebookUrl: "https://www.facebook.com/profile.php?id=61590331754351",
-  address: "",
+  address: "97Pueansao nail studio 45/4 (หลังที่ 4) อำเภอเมืองปทุมธานี ปทุมธานี 12000",
   hours: "",
   mapQuery: "97Pueansao nail studio"
 };
@@ -101,11 +101,36 @@ const lightbox = document.getElementById("lightbox");
 const lightboxImage = document.getElementById("lightboxImage");
 const lightboxTitle = document.getElementById("lightboxTitle");
 const lightboxClose = document.querySelector(".lightbox-close");
+const lightboxPrev = document.getElementById("lightboxPrev");
+const lightboxNext = document.getElementById("lightboxNext");
+const lightboxCounter = document.getElementById("lightboxCounter");
+let activeLightboxIndex = 0;
+
+function getGalleryItems() {
+  return [...document.querySelectorAll(".gallery-item")];
+}
+
+function showLightboxItem(index) {
+  const items = getGalleryItems();
+  if (!items.length) return;
+  activeLightboxIndex = (index + items.length) % items.length;
+  const item = items[activeLightboxIndex];
+  lightboxImage.src = item.dataset.image;
+  lightboxImage.alt = item.dataset.title;
+  lightboxTitle.textContent = item.dataset.title;
+  lightboxCounter.textContent = `${activeLightboxIndex + 1} / ${items.length}`;
+}
 
 function openLightbox(image, title) {
-  lightboxImage.src = image;
-  lightboxImage.alt = title;
-  lightboxTitle.textContent = title;
+  const items = getGalleryItems();
+  const requestedIndex = items.findIndex((item) => item.dataset.image === image);
+  if (requestedIndex >= 0) showLightboxItem(requestedIndex);
+  else {
+    lightboxImage.src = image;
+    lightboxImage.alt = title;
+    lightboxTitle.textContent = title;
+    lightboxCounter.textContent = "";
+  }
   lightbox.classList.add("active");
   lightbox.setAttribute("aria-hidden", "false");
   document.body.classList.add("no-scroll");
@@ -257,6 +282,8 @@ supabaseClient.auth.getSession().then(({ data: { session } }) => {
 renderSavedGallery();
 
 lightboxClose.addEventListener("click", closeLightbox);
+lightboxPrev.addEventListener("click", () => showLightboxItem(activeLightboxIndex - 1));
+lightboxNext.addEventListener("click", () => showLightboxItem(activeLightboxIndex + 1));
 
 lightbox.addEventListener("click", (event) => {
   if (event.target === lightbox) {
@@ -264,9 +291,28 @@ lightbox.addEventListener("click", (event) => {
   }
 });
 
+let lightboxTouchStartX = 0;
+
+lightbox.addEventListener("touchstart", (event) => {
+  lightboxTouchStartX = event.changedTouches[0].clientX;
+}, { passive: true });
+
+lightbox.addEventListener("touchend", (event) => {
+  if (!lightbox.classList.contains("active")) return;
+  const swipeDistance = event.changedTouches[0].clientX - lightboxTouchStartX;
+  if (Math.abs(swipeDistance) < 45) return;
+  showLightboxItem(activeLightboxIndex + (swipeDistance < 0 ? 1 : -1));
+}, { passive: true });
+
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && lightbox.classList.contains("active")) {
     closeLightbox();
+  }
+  if (event.key === "ArrowLeft" && lightbox.classList.contains("active")) {
+    showLightboxItem(activeLightboxIndex - 1);
+  }
+  if (event.key === "ArrowRight" && lightbox.classList.contains("active")) {
+    showLightboxItem(activeLightboxIndex + 1);
   }
 });
 
