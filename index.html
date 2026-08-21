@@ -314,7 +314,8 @@
       <button class="dialog-close" type="button" data-close-dialog="adminLoginDialog" aria-label="ปิด">×</button>
       <span class="section-kicker">ADMIN</span>
       <h2 id="adminLoginTitle">เข้าสู่ระบบจัดการรูป</h2>
-      <p>กรอกรหัสผ่านเพื่อเพิ่มหรือลบรูปผลงาน</p>
+      <p>เข้าสู่ระบบด้วยบัญชีแอดมินของ Supabase เพื่อเพิ่มหรือลบรูปผลงาน</p>
+      <label>อีเมล<input id="adminEmail" type="email" required autocomplete="email" /></label>
       <label>รหัสผ่าน<input id="adminPassword" type="password" required autocomplete="current-password" /></label>
       <p class="form-message" id="adminLoginMessage" aria-live="polite"></p>
       <button class="btn btn-dark" type="submit">เข้าสู่ระบบ <span>→</span></button>
@@ -345,6 +346,7 @@
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="script.js"></script>
 </body>
 </html>

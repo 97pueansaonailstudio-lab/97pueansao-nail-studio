@@ -27,10 +27,17 @@ const SHOP_CONFIG = {
   mapQuery: "97Pueansao nail studio"
 };
 
-const ADMIN_CONFIG = {
-  password: "97pueansao",
-  storageKey: "97pueansao-gallery"
+const SUPABASE_CONFIG = {
+  url: "https://bfavtiawdvrifhnsmsbt.supabase.co",
+  publishableKey: "sb_publishable_yBX-u-TbyHDOR0FZjTVT1A_V0CqvSPD",
+  bucket: "gallery",
+  table: "gallery_images"
 };
+
+const supabaseClient = window.supabase?.createClient(
+  SUPABASE_CONFIG.url,
+  SUPABASE_CONFIG.publishableKey
+);
 
 // ------------------------------
 // Mobile navigation
@@ -120,35 +127,51 @@ document.querySelectorAll(".gallery-item").forEach((item) => {
   });
 });
 
-// Gallery administration (browser-only storage)
-function getSavedGallery() {
-  try {
-    const photos = JSON.parse(localStorage.getItem(ADMIN_CONFIG.storageKey) || "[]");
-    return Array.isArray(photos) ? photos : [];
-  } catch (_) {
-    return [];
-  }
+// Gallery administration (Supabase Storage + Database)
+async function getSavedGallery() {
+  if (!supabaseClient) throw new Error("ไม่สามารถเชื่อมต่อ Supabase ได้");
+  const { data, error } = await supabaseClient
+    .from(SUPABASE_CONFIG.table)
+    .select("id, title, image_path")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data.map((photo) => ({
+    ...photo,
+    image: supabaseClient.storage.from(SUPABASE_CONFIG.bucket).getPublicUrl(photo.image_path).data.publicUrl
+  }));
 }
 
-function saveGallery(photos) {
-  localStorage.setItem(ADMIN_CONFIG.storageKey, JSON.stringify(photos));
+function escapeHtml(value) {
+  return String(value).replace(/[&<>'"]/g, (character) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;"
+  })[character]);
 }
 
-function renderSavedGallery() {
+async function renderSavedGallery() {
   document.querySelectorAll(".gallery-uploaded").forEach((item) => item.remove());
   const gallery = document.getElementById("gallery");
-  getSavedGallery().forEach((photo) => {
+  let photos = [];
+  try {
+    photos = await getSavedGallery();
+  } catch (error) {
+    console.error("Could not load gallery", error);
+    return;
+  }
+  photos.forEach((photo) => {
     const item = document.createElement("button");
     item.type = "button";
     item.className = "gallery-item gallery-uploaded reveal visible";
     item.dataset.id = photo.id;
     item.dataset.image = photo.image;
     item.dataset.title = photo.title;
-    item.innerHTML = `<img src="${photo.image}" alt="${photo.title}" loading="lazy"><span class="gallery-overlay"><small>OUR WORK</small><strong>${photo.title}</strong></span><span class="gallery-delete" aria-label="ลบรูป">×</span>`;
-    item.addEventListener("click", (event) => {
+    item.innerHTML = `<img src="${photo.image}" alt="${escapeHtml(photo.title)}" loading="lazy"><span class="gallery-overlay"><small>OUR WORK</small><strong>${escapeHtml(photo.title)}</strong></span><span class="gallery-delete" aria-label="ลบรูป">×</span>`;
+    item.addEventListener("click", async (event) => {
       if (event.target.closest(".gallery-delete")) {
         if (document.body.classList.contains("admin-mode") && confirm("ลบรูปนี้ใช่หรือไม่?")) {
-          saveGallery(getSavedGallery().filter((saved) => saved.id !== photo.id));
+          const { error: storageError } = await supabaseClient.storage.from(SUPABASE_CONFIG.bucket).remove([photo.image_path]);
+          if (storageError) return alert(`ลบรูปไม่สำเร็จ: ${storageError.message}`);
+          const { error } = await supabaseClient.from(SUPABASE_CONFIG.table).delete().eq("id", photo.id);
+          if (error) return alert(`ลบข้อมูลไม่สำเร็จ: ${error.message}`);
           renderSavedGallery();
         }
         return;
@@ -159,50 +182,33 @@ function renderSavedGallery() {
   });
 }
 
-function resizeImage(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error("ไม่สามารถอ่านไฟล์รูปได้"));
-    reader.onload = () => {
-      const image = new Image();
-      image.onerror = () => reject(new Error("ไฟล์รูปนี้ไม่รองรับ"));
-      image.onload = () => {
-        const longestEdge = 1400;
-        const scale = Math.min(1, longestEdge / Math.max(image.width, image.height));
-        const canvas = document.createElement("canvas");
-        canvas.width = Math.round(image.width * scale);
-        canvas.height = Math.round(image.height * scale);
-        canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL("image/jpeg", 0.82));
-      };
-      image.src = reader.result;
-    };
-    reader.readAsDataURL(file);
-  });
-}
-
 const adminEntry = document.getElementById("adminEntry");
 const adminLoginDialog = document.getElementById("adminLoginDialog");
 const adminGalleryDialog = document.getElementById("adminGalleryDialog");
 const adminLoginForm = document.getElementById("adminLoginForm");
 const adminGalleryForm = document.getElementById("adminGalleryForm");
 
-adminEntry.addEventListener("click", () => {
-  (sessionStorage.getItem("97pueansao-admin") === "true" ? adminGalleryDialog : adminLoginDialog).showModal();
+adminEntry.addEventListener("click", async () => {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  (session ? adminGalleryDialog : adminLoginDialog).showModal();
 });
 
 document.querySelectorAll("[data-close-dialog]").forEach((button) => {
   button.addEventListener("click", () => document.getElementById(button.dataset.closeDialog).close());
 });
 
-adminLoginForm.addEventListener("submit", (event) => {
+adminLoginForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const message = document.getElementById("adminLoginMessage");
-  if (document.getElementById("adminPassword").value !== ADMIN_CONFIG.password) {
-    message.textContent = "รหัสผ่านไม่ถูกต้อง";
+  message.textContent = "กำลังเข้าสู่ระบบ...";
+  const { error } = await supabaseClient.auth.signInWithPassword({
+    email: document.getElementById("adminEmail").value.trim(),
+    password: document.getElementById("adminPassword").value
+  });
+  if (error) {
+    message.textContent = "อีเมลหรือรหัสผ่านไม่ถูกต้อง";
     return;
   }
-  sessionStorage.setItem("97pueansao-admin", "true");
   document.body.classList.add("admin-mode");
   adminLoginDialog.close();
   adminLoginForm.reset();
@@ -215,27 +221,39 @@ adminGalleryForm.addEventListener("submit", async (event) => {
   const message = document.getElementById("adminGalleryMessage");
   const files = [...document.getElementById("galleryFiles").files];
   const title = document.getElementById("uploadTitle").value.trim() || "ผลงานของเรา";
-  message.textContent = "กำลังเตรียมรูป...";
+  message.textContent = "กำลังอัปโหลดรูป...";
   try {
-    const images = await Promise.all(files.map(resizeImage));
-    const photos = getSavedGallery();
-    images.forEach((image, index) => photos.push({ id: `${Date.now()}-${index}`, title, image }));
-    saveGallery(photos);
-    renderSavedGallery();
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) throw new Error("กรุณาเข้าสู่ระบบอีกครั้ง");
+    for (const file of files) {
+      if (file.size > 6 * 1024 * 1024) throw new Error("กรุณาเลือกรูปที่มีขนาดไม่เกิน 6 MB");
+      const extension = file.name.split(".").pop().toLowerCase();
+      const path = `${user.id}/${crypto.randomUUID()}.${extension}`;
+      const { error: uploadError } = await supabaseClient.storage.from(SUPABASE_CONFIG.bucket).upload(path, file, { cacheControl: "3600", contentType: file.type });
+      if (uploadError) throw uploadError;
+      const { error: insertError } = await supabaseClient.from(SUPABASE_CONFIG.table).insert({ title, image_path: path });
+      if (insertError) {
+        await supabaseClient.storage.from(SUPABASE_CONFIG.bucket).remove([path]);
+        throw insertError;
+      }
+    }
+    await renderSavedGallery();
     adminGalleryForm.reset();
     message.textContent = "เพิ่มรูปเรียบร้อยแล้ว";
   } catch (error) {
-    message.textContent = error.name === "QuotaExceededError" ? "พื้นที่เก็บรูปเต็ม กรุณาลบรูปเก่าออกก่อน" : error.message;
+    message.textContent = error.message || "ไม่สามารถอัปโหลดรูปได้";
   }
 });
 
-document.getElementById("adminLogout").addEventListener("click", () => {
-  sessionStorage.removeItem("97pueansao-admin");
+document.getElementById("adminLogout").addEventListener("click", async () => {
+  await supabaseClient.auth.signOut();
   document.body.classList.remove("admin-mode");
   adminGalleryDialog.close();
 });
 
-if (sessionStorage.getItem("97pueansao-admin") === "true") document.body.classList.add("admin-mode");
+supabaseClient.auth.getSession().then(({ data: { session } }) => {
+  document.body.classList.toggle("admin-mode", Boolean(session));
+});
 renderSavedGallery();
 
 lightboxClose.addEventListener("click", closeLightbox);
