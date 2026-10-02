@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="th">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>บัญชีร้าน | 97Pueansao</title>
+    <link rel="stylesheet" href="accounting.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+    <script src="accounting-db.js" defer></script>
+    <script src="accounting-auth.js" defer></script>
+</head>
+
+<body>
+    <header><a class="brand" href="index.html"><span class="logo">97</span><span>97Pueansao<small>NAIL STUDIO ·
+                    บัญชีร้าน</small></span></a><span class="badge">สมุดรายรับ</span></header>
+    <section id="loginPanel" class="panel login-panel" aria-labelledby="loginTitle">
+        <p class="eyebrow">97PUEANSAO · STAFF ACCESS</p>
+        <h1 id="loginTitle">เข้าสู่ระบบบัญชีร้าน</h1>
+        <p class="muted">ใช้บัญชีเดียวกับระบบจัดการรูปผลงาน</p>
+        <form id="accountLoginForm">
+            <label>อีเมล<input id="accountEmail" type="email" autocomplete="username" required></label>
+            <label>รหัสผ่าน<input id="accountPassword" type="password" autocomplete="current-password" required></label>
+            <p id="authMessage" role="status" aria-live="polite">กำลังตรวจสอบการเข้าสู่ระบบ…</p>
+            <button id="accountLogin" type="submit" class="save" disabled>เข้าสู่ระบบ</button>
+        </form>
+        <p class="muted">หากยังไม่มีบัญชี ให้เจ้าของร้านสร้างผู้ใช้ใน Supabase ของร้านก่อน</p>
+        <noscript>กรุณาเปิด JavaScript เพื่อเข้าสู่ระบบ</noscript>
+    </section>
+    <main id="accountApp" hidden inert>
+        <div class="account-session"><span id="accountIdentity"></span><button id="accountLogout" type="button">ออกจากระบบ</button></div>
+        <div class="heading">
+            <div>
+                <p class="eyebrow">STUDIO OVERVIEW</p>
+                <h1>Dashboard บัญชีร้าน</h1>
+                <p class="muted" id="todayLabel"></p>
+            </div>
+            <div class="tools"><button id="backup" type="button">สำรองข้อมูล</button><label
+                    class="button">นำเข้าข้อมูล<input id="import" type="file" accept="application/json,.json"
+                        hidden></label></div>
+        </div>
+        <p class="notice">ข้อมูลบันทึกในฐานข้อมูลของร้าน • ใช้บัญชีเดิมเพื่อดูข้อมูลจากเครื่องอื่น • ข้อมูลแยกตามบัญชีที่เข้าสู่ระบบ</p>
+        <div class="account-session"><span id="dbStatus" role="status">กำลังเชื่อมต่อฐานข้อมูล…</span><button id="refresh" type="button">โหลดข้อมูลล่าสุด</button></div>
+        <div id="localMigration" class="notice" hidden><p id="localCount"></p><button id="migrate" type="button">ย้ายข้อมูลเดิมเข้าบัญชีนี้</button></div>
+        <p id="message" role="status" aria-live="polite"></p>
+        <section class="stats" aria-label="สรุปรายรับ">
+            <article class="stat primary"><span>รายรับวันนี้</span><strong id="todayTotal">฿0.00</strong><small
+                    id="todayCount">0 รายการ</small></article>
+            <article class="stat"><span>รายรับเดือนที่เลือก</span><strong id="monthTotal">฿0.00</strong><small
+                    id="monthLabel"></small></article>
+            <article class="stat"><span>รายการในเดือน</span><strong
+                    id="monthCount">0</strong><small>รายการบริการที่บันทึก</small></article>
+            <article class="stat"><span>เฉลี่ยต่อรายการ</span><strong
+                    id="average">฿0.00</strong><small>คำนวณจากเดือนที่เลือก</small></article>
+        </section>
+        <div class="workspace">
+            <section class="panel entry">
+                <div class="section-title"><span class="step">+</span>
+                    <h2 id="formTitle">บันทึกรายรับ</h2>
+                </div>
+                <form id="entryForm"><label>วันที่ให้บริการ<input id="date" type="date"
+                            required></label><label>ลูกค้าลำดับที่<select id="customer"
+                            required></select></label><label>บริการ / ตัวเลือก<select id="service" required>
+                            <option value="">เลือกบริการ</option>
+                            <option>ทาสีเจลมือ</option>
+                            <option>ทาสีเจลเท้า</option>
+                            <option>ต่อเล็บ</option>
+                            <option>เพ้นท์เล็บ</option>
+                            <option>ถอดเล็บ / ล้างสี</option>
+                            <option>สปามือ / เท้า</option>
+                            <option>อื่น ๆ</option>
+                        </select></label><label>ราคา (บาท)<input id="price" type="number" min="0" max="9999999"
+                            step="0.01" inputmode="decimal" placeholder="0.00" required></label><label>หมายเหตุ <span
+                            class="muted">(ไม่บังคับ)</span><input id="note" maxlength="200"
+                            placeholder="เช่น สีเจล + เพ้นท์ 2 นิ้ว"></label><button class="save" id="save"
+                        type="submit">บันทึกรายการ</button><button id="cancel" type="button"
+                        hidden>ยกเลิกการแก้ไข</button></form>
+            </section>
+            <section class="panel ledger">
+                <div class="section-title ledger-title">
+                    <div>
+                        <p class="eyebrow">INCOME RECORDS</p>
+                        <h2>รายการรายรับ</h2>
+                    </div><label class="month-filter">เดือนที่แสดง<input id="month" type="month" required></label>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>วันที่</th>
+                                <th>ลูกค้า</th>
+                                <th>บริการ</th>
+                                <th class="amount">ราคา</th>
+                                <th>จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rows"></tbody>
+                    </table>
+                </div>
+                <div class="ledger-foot"><span id="resultCount">0 รายการ</span><strong id="tableTotal">รวม
+                        ฿0.00</strong></div>
+                <div class="chart-heading">
+                    <h3>รายรับ 7 วันล่าสุด</h3><span class="muted">บาท / วัน</span>
+                </div>
+                <div id="chart" class="chart" aria-label="รายรับ 7 วันล่าสุด"></div>
+            </section>
+        </div>
+        <footer>97Pueansao nail studio <span>ยอดที่แสดงคือรายรับ ยังไม่หักค่าใช้จ่าย</span></footer>
+    </main>
+    <dialog id="deleteDialog">
+        <h2>ลบรายการนี้?</h2>
+        <p id="deleteSummary"></p>
+        <div class="tools"><button id="keep" type="button">เก็บรายการไว้</button><button id="confirmDelete"
+                class="danger" type="button">ลบรายการ</button></div>
+    </dialog>
+</body>
+
+</html>
